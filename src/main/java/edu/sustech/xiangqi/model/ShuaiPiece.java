@@ -1,10 +1,10 @@
 package edu.sustech.xiangqi.model;
 
-// info 帅：只能在九宫格内上下左右移动一格
+// info 帅/将：只能在九宫格内上下左右移动一格
 
 public class ShuaiPiece extends Piece {
     public ShuaiPiece(boolean isRed) {
-        super("帅", isRed);
+        super(isRed ? "帅" : "将", isRed);
     }
 
     @Override

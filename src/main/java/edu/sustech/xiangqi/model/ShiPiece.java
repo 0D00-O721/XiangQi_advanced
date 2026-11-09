@@ -1,10 +1,10 @@
 package edu.sustech.xiangqi.model;
 
-// info 仕：每次斜走一格，不能离开红方九宫
+// info 仕/士：每次斜走一格，不能离开红方九宫
 
 public class ShiPiece extends Piece {
     public ShiPiece(boolean isRed) {
-        super("仕", isRed);
+        super(isRed ? "仕" : "士", isRed);
     }
 
     @Override

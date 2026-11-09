@@ -1,10 +1,10 @@
 package edu.sustech.xiangqi.model;
 
-// info 兵：一次走一格，过河前只能往前走，过河后可以往前/左/右走
+// info 兵/卒：一次走一格，过河前只能往前走，过河后可以往前/左/右走
 
 public class BingPiece extends Piece {
     public BingPiece(boolean isRed) {
-        super("兵", isRed);
+        super(isRed ? "兵" : "卒", isRed);
     }
 
     @Override
