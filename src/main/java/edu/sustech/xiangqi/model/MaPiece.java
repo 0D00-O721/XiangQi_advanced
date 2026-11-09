@@ -9,7 +9,15 @@ public class MaPiece extends Piece {
 
     @Override
     public boolean canMove(Board board, int fromRow, int fromCol, int toRow, int toCol) {
-        // TODO：实现马的移动规则。
+        int dr = toRow - fromRow;
+        int dc = toCol - fromCol;
+        //不能原地走
+        if (dr == 0 && dc == 0) return false;
+        //必须走日字
+        if (Math.abs(dr) + Math.abs(dc) != 3) return false;
+        //前方不能有阻挡
+        if (Math.abs(dr) == 2 && board.getPieceAt(fromRow + dr / 2, fromCol) != null) return false;
+        if (Math.abs(dc) == 2 && board.getPieceAt(fromRow, fromCol + dc / 2) != null) return false;
         return true;
     }
 }

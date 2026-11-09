@@ -9,7 +9,22 @@ public class BingPiece extends Piece {
 
     @Override
     public boolean canMove(Board board, int fromRow, int fromCol, int toRow, int toCol) {
-        // TODO：实现兵的移动规则。
+        int dr = toRow - fromRow;
+        int dc = toCol - fromCol;
+        //不能移动超过一格或不移动
+        if (Math.abs(dr) + Math.abs(dc) != 1) return false;
+        //判断是那方的兵
+        if (isRed()) {
+            //没过河不能横着走
+            if (fromRow >= 5 && Math.abs(dc) > 0) return false;
+            //不能回退(行变大)
+            if (dr == 1) return false;
+        } else {
+            //没过河不能横着走
+            if (fromRow <= 4 && Math.abs(dc) > 0) return false;
+            //不能回退(行变小)
+            if (dr == -1) return false;
+        }
         return true;
     }
 
