@@ -15,9 +15,41 @@ public class Board {
     }
 
     private void initializePieces() {
-        pieces[9][3] = new AdvisorPiece();
-        pieces[9][4] = new GeneralPiece();
-        pieces[9][5] = new AdvisorPiece();
+        //初始化红方棋子
+        pieces[9][3] = new ShiPiece(true);
+        pieces[9][4] = new ShuaiPiece(true);
+        pieces[9][5] = new ShiPiece(true);
+        pieces[9][0] = new ChePiece(true);
+        pieces[9][8] = new ChePiece(true);
+        pieces[9][1] = new MaPiece(true);
+        pieces[9][7] = new MaPiece(true);
+        pieces[9][2] = new XiangPiece(true);
+        pieces[9][6] = new XiangPiece(true);
+        pieces[7][1] = new PaoPiece(true);
+        pieces[7][7] = new PaoPiece(true);
+        pieces[6][0] = new BingPiece(true);
+        pieces[6][2] = new BingPiece(true);
+        pieces[6][4] = new BingPiece(true);
+        pieces[6][6] = new BingPiece(true);
+        pieces[6][8] = new BingPiece(true);
+
+        //初始化黑方棋子
+        pieces[0][3] = new ShiPiece(false);
+        pieces[0][4] = new ShuaiPiece(false);
+        pieces[0][5] = new ShiPiece(false);
+        pieces[0][0] = new ChePiece(false);
+        pieces[0][8] = new ChePiece(false);
+        pieces[0][1] = new MaPiece(false);
+        pieces[0][7] = new MaPiece(false);
+        pieces[0][2] = new XiangPiece(false);
+        pieces[0][6] = new XiangPiece(false);
+        pieces[2][1] = new PaoPiece(false);
+        pieces[2][7] = new PaoPiece(false);
+        pieces[3][0] = new BingPiece(false);
+        pieces[3][2] = new BingPiece(false);
+        pieces[3][4] = new BingPiece(false);
+        pieces[3][6] = new BingPiece(false);
+        pieces[3][8] = new BingPiece(false);
     }
 
     public boolean isInside(int row, int col) {

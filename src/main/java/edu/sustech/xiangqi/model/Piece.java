@@ -19,10 +19,6 @@ public abstract class Piece {
         return isRed;
     }
 
-    /**
-     * 判断本棋子的局部走法是否合法
-     *
-     * @return 是否可以移动
-     */
+    // 判断 该种类型 的棋子是否有这样的移动方式
     public abstract boolean canMove(Board board, int fromRow, int fromCol, int toRow, int toCol);
 }
