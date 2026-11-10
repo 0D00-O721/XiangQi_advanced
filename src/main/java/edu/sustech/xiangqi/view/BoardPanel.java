@@ -18,7 +18,7 @@ import java.awt.RenderingHints;
 public final class BoardPanel extends JPanel {
     private static final long serialVersionUID = 1L;
     private static final int CELL_SIZE = 52;
-    private static final int MARGIN = 36;
+    private static final int MARGIN = 70;
     private static final int PIECE_RADIUS = 21;
     private static final int HIT_RADIUS = 23;
 
@@ -89,7 +89,7 @@ public final class BoardPanel extends JPanel {
         drawGridLine(g, 7, 3, 9, 5);
         drawGridLine(g, 7, 5, 9, 3);
 
-        g.setFont(new Font(Font.SERIF, Font.BOLD, 23));
+        g.setFont(new Font("KaiTi", Font.BOLD, 23));
         int riverY = (screenY(4) + screenY(5)) / 2;
         drawCenteredText(g, "楚 河", screenX(2), riverY);
         drawCenteredText(g, "汉 界", screenX(6), riverY);
@@ -114,11 +114,11 @@ public final class BoardPanel extends JPanel {
 
                 g.setColor(new Color(255, 248, 228));
                 g.fillOval(x - PIECE_RADIUS, y - PIECE_RADIUS, PIECE_RADIUS * 2, PIECE_RADIUS * 2);
-                g.setColor(new Color(120, 79, 45));
-                g.setStroke(new BasicStroke(2));
+                g.setColor(piece.isRed() ? new Color(170, 87, 55) : new Color(120, 79, 60));
+                g.setStroke(new BasicStroke(3));
                 g.drawOval(x - PIECE_RADIUS, y - PIECE_RADIUS, PIECE_RADIUS * 2, PIECE_RADIUS * 2);
                 g.setColor(piece.isRed() ? new Color(177, 43, 39) : new Color(43, 43, 43));
-                g.setFont(new Font(Font.SERIF, Font.BOLD, 28));
+                g.setFont(new Font("KaiTi", Font.BOLD, 28));
                 drawCenteredText(g, piece.getName(), x, y);
             }
         }

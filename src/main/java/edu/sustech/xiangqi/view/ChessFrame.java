@@ -18,14 +18,14 @@ public final class ChessFrame extends JFrame {
         JButton button = new JButton("Click");
         button.setBounds(10, 10, 80, 30);  // x, y, width, height
         boardPanel.add(button);
-        JLabel label=new JLabel("Sample");
+        JLabel label = new JLabel("Sample");
         label.setBounds(100, 10, 80, 30);
         boardPanel.add(label);
-        button.addActionListener(e->{
+        button.addActionListener(e -> {
             label.setText("Click");
         });
         setContentPane(boardPanel);
-        setSize(1000,1000);
+        setSize(900, 700);
         setResizable(false);
         setLocationRelativeTo(null);
     }

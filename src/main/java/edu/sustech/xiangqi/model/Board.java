@@ -2,6 +2,8 @@ package edu.sustech.xiangqi.model;
 
 // 保存棋盘数据，并统一检查和执行移动
 
+import java.awt.*;
+
 public class Board {
     // 定义棋盘大小
     public static final int ROWS = 10;
@@ -15,6 +17,7 @@ public class Board {
         initializePieces();
     }
 
+    //统计一个区域内有多少棋子
     public int hasPieces(int fromRow, int fromCol, int toRow, int toCol) {
         int cnt = 0;
         if (fromRow > toRow) {
@@ -35,13 +38,41 @@ public class Board {
         return cnt;
     }
 
-    public boolean JiangtoShuai() {
-        for (int i = 7; i <= 9; i++) {
-            for (int j = 3; j <= 5; j++) {
-                Piece piece = getPieceAt(i, j);
-                if (piece != null && piece.getName().equals("帅")) {
-                    piece = getPieceAt(0, j);
-                    return hasPieces(i, j, 0, j) == 2 && piece != null && piece.getName().equals("将");
+    //获取将/帅的坐标
+    public Point getJiangShuai(boolean isRed) {
+        int irow = isRed ? 7 : 0;
+        int frow = isRed ? 9 : 2;
+        String s = isRed ? "帅" : "将";
+        for (int i = irow; i <= frow; i++)
+            for (int j = 3; j <= 5; j++)
+                if (getPieceAt(i, j) != null && getPieceAt(i, j).getName().equals(s))
+                    return new Point(i, j);
+        return null;
+    }
+
+    //判断将帅是否面对面
+    public boolean JiangtoShuai(int row, int col) {
+        //从红帅位置网上扫描
+        for (int i = row - 1; i >= 0; i--) {
+            Piece piece = getPieceAt(i, col);
+            //如果有阻挡，直接否
+            if (piece != null && !piece.getName().equals("将")) return false;
+            //如果碰到将，返回是
+            if (piece != null && piece.getName().equals("将")) return true;
+        }
+        //循环结束说明一路无阻挡
+        return false;
+    }
+
+    //判断一方是否[被]将军
+    public boolean isJiangjun(boolean isRed) {
+        int Jrow = getJiangShuai(isRed).x;
+        int Jcol = getJiangShuai(isRed).y;
+        for (int i = 0; i <= 9; i++) {
+            for (int j = 0; j <= 8; j++) {
+                Piece from = getPieceAt(i, j);
+                if (from != null && from.isRed() != isRed && from.canMove(this, i, j, Jrow, Jcol)) {
+                    return true;
                 }
             }
         }
@@ -98,6 +129,11 @@ public class Board {
     }
 
     public boolean tryMove(int fromRow, int fromCol, int toRow, int toCol) {
+        // TODO：实现下面注释的功能
+        // info:该函数返回一个int类型的值代表当前移动操作的响应类型:
+        // info -2:已经将死对方 -1:成功将军对方 0:可以移动且是一次常规移动 1:原地 2:空棋子 3:出界 4:不是你的回合
+        //  5:移动目标位置是你的棋子 6:棋子没有这个走法 7:将帅不能面对面 8:不能送将
+
         if (!isInside(fromRow, fromCol) || !isInside(toRow, toCol)) {
             return false;
         }
@@ -120,20 +156,34 @@ public class Board {
             return false;
         }
 
-        //检查走完后将帅是否无遮挡面对面
+        //模拟移动并进行一系列操作
         pieces[fromRow][fromCol] = null;
         pieces[toRow][toCol] = piece;
-        boolean flag = JiangtoShuai();
-        pieces[fromRow][fromCol] = piece;
-        pieces[toRow][toCol] = topiece;
-        if (flag) return false;
+
+        //检查走完后将帅是否无遮挡面对面
+        if (JiangtoShuai(getJiangShuai(true).x, getJiangShuai(true).y)) {
+            pieces[fromRow][fromCol] = piece;
+            pieces[toRow][toCol] = topiece;
+            return false;
+        }
 
         // TODO：检查是否将军
 
+        //1.检查己方移动是否会导致对方有棋子能将军自己
+        if (isJiangjun(Redturn)) {
+            pieces[fromRow][fromCol] = piece;
+            pieces[toRow][toCol] = topiece;
+            return false;
+        }
 
-        //切换棋子状态
-        pieces[fromRow][fromCol] = null;
-        pieces[toRow][toCol] = piece;
+        //2.检查己方这一步是否将军对面
+        if (isJiangjun(!Redturn)) {
+            Redturn = !Redturn;
+            return true;
+        }
+
+        //3.检查是否将死对面
+
 
         //改成黑方回合
         Redturn = !Redturn;
