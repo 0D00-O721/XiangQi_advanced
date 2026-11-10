@@ -79,6 +79,14 @@ public class Board {
         return false;
     }
 
+    //重开
+    public void reset() {
+        for (int i = 0; i < ROWS; i++)
+            for (int j = 0; j < COLS; j++) pieces[i][j] = null;
+        Redturn = true;
+        initializePieces();
+    }
+
     private void initializePieces() {
         //初始化红方棋子
         pieces[9][3] = new ShiPiece(true);

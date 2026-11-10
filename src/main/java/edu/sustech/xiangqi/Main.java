@@ -17,6 +17,8 @@ public class Main {
                 ChessController controller = new ChessController(board, frame.getBoardPanel());
 
                 frame.getBoardPanel().addMouseListener(controller);
+                frame.getBoardPanel().addMouseMotionListener(controller);
+                frame.setOnRestart(controller::restart);
                 frame.setVisible(true);
             }
         });
