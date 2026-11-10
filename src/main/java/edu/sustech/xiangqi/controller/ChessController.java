@@ -9,69 +9,77 @@ import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-// 处理点击和选中状态
+// 鼠标点击和悬停
 public class ChessController extends MouseAdapter {
-    private final Board board;
-    private final BoardPanel boardPanel;
+    private final Board b;
+    private final BoardPanel bp;
 
-    // 默认 -1 没有选中任何棋子
-    private int selectedRow = -1;
-    private int selectedCol = -1;
+    private int r0 = -1, c0 = -1;
 
-    public ChessController(Board board, BoardPanel boardPanel) {
-        this.board = board;
-        this.boardPanel = boardPanel;
+    public ChessController(Board b, BoardPanel bp) {
+        this.b = b;
+        this.bp = bp;
     }
 
     @Override
-    public void mouseClicked(MouseEvent event) {
-        if (!SwingUtilities.isLeftMouseButton(event)) {
+    public void mouseClicked(MouseEvent e) {
+        if (!SwingUtilities.isLeftMouseButton(e)) return;
+        Point p = bp.at(e.getX(), e.getY());
+        if (p != null) click(p.y, p.x);
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        Point p = bp.at(e.getX(), e.getY());
+        if (p == null) bp.hv(-1, -1);
+        else bp.hv(p.y, p.x);
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+        bp.hv(-1, -1);
+    }
+
+    private void click(int r, int c) {
+        if (r == r0 && c == c0) {
+            clear();
             return;
         }
 
-        Point position = boardPanel.getIntersectionAt(event.getX(), event.getY());
-        if (position != null) {
-            handleClick(position.y, position.x);
+        Piece cp = b.getPieceAt(r, c);
+        if (r0 == -1) {
+            // 只能选轮到的一方
+            if (cp != null && cp.isRed() == b.Redturn) pick(r, c);
+            return;
+        }
+
+        Piece sp = b.getPieceAt(r0, c0);
+        if (cp != null && sp != null && cp.isRed() == sp.isRed() && cp.isRed() == b.Redturn) {
+            pick(r, c);
+            return;
+        }
+
+        int fr = r0, fc = c0;
+        Piece eat = b.getPieceAt(r, c);
+        if (b.tryMove(fr, fc, r, c)) {
+            clear();
+            bp.moveAnim(b.getPieceAt(r, c), eat, fr, fc, r, c);
         }
     }
 
-    private void handleClick(int row, int col) {
-        if (row == selectedRow && col == selectedCol) {
-            clearSelection();
-            return;
-        }
-
-        Piece clickedPiece = board.getPieceAt(row, col);
-        if (selectedRow == -1) {
-            if (clickedPiece != null) {
-                select(row, col);
-            }
-            return;
-        }
-
-        // 点击另一枚己方棋子时切换选择
-        Piece selectedPiece = board.getPieceAt(selectedRow, selectedCol);
-        if (clickedPiece != null && selectedPiece != null
-                && clickedPiece.isRed() == selectedPiece.isRed()) {
-            select(row, col);
-            return;
-        }
-
-        // 移动失败时保留选择，用户可以继续选择其他落点
-        if (board.tryMove(selectedRow, selectedCol, row, col)) {
-            clearSelection();
-        }
+    private void pick(int r, int c) {
+        r0 = r; c0 = c;
+        bp.sel(r, c);
     }
 
-    private void select(int row, int col) {
-        selectedRow = row;
-        selectedCol = col;
-        boardPanel.showSelection(row, col);
+    private void clear() {
+        r0 = -1; c0 = -1;
+        bp.sel(-1, -1);
     }
 
-    private void clearSelection() {
-        selectedRow = -1;
-        selectedCol = -1;
-        boardPanel.showSelection(-1, -1);
+    public void restart() {
+        b.reset();
+        r0 = -1; c0 = -1;
+        bp.resetState();
     }
 }
