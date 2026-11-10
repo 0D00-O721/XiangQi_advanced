@@ -9,7 +9,13 @@ public class PaoPiece extends Piece {
 
     @Override
     public boolean canMove(Board board, int fromRow, int fromCol, int toRow, int toCol) {
-        // TODO：实现炮的移动规则。
-        return true;
+        int dr = Math.abs(toRow - fromRow);
+        int dc = Math.abs(toCol - fromCol);
+        //不能不走，也不能斜着走
+        if ((dr == 0 && dc == 0) || (dr != 0 && dc != 0)) return false;
+        //如果只是位移要确保直线位置无子
+        if (board.getPieceAt(toRow, toCol) == null) return board.hasPieces(fromRow, fromCol, toRow, toCol) == 1;
+            //如果吃子要保证中间有子
+        else return board.hasPieces(fromRow, fromCol, toRow, toCol) == 3;
     }
 }

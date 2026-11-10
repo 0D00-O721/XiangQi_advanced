@@ -6,12 +6,46 @@ public class Board {
     // 定义棋盘大小
     public static final int ROWS = 10;
     public static final int COLS = 9;
+    public boolean Redturn = true;
 
     // 存储棋子位置
     private final Piece[][] pieces = new Piece[ROWS][COLS];
 
     public Board() {
         initializePieces();
+    }
+
+    public int hasPieces(int fromRow, int fromCol, int toRow, int toCol) {
+        int cnt = 0;
+        if (fromRow > toRow) {
+            int tmp = fromRow;
+            fromRow = toRow;
+            toRow = tmp;
+        }
+        if (fromCol > toCol) {
+            int tmp = fromCol;
+            fromCol = toCol;
+            toCol = tmp;
+        }
+        for (int i = fromRow; i <= toRow; i++) {
+            for (int j = fromCol; j <= toCol; j++) {
+                if (getPieceAt(i, j) != null) cnt++;
+            }
+        }
+        return cnt;
+    }
+
+    public boolean JiangtoShuai() {
+        for (int i = 7; i <= 9; i++) {
+            for (int j = 3; j <= 5; j++) {
+                Piece piece = getPieceAt(i, j);
+                if (piece != null && piece.getName().equals("帅")) {
+                    piece = getPieceAt(0, j);
+                    return hasPieces(i, j, 0, j) == 2 && piece != null && piece.getName().equals("将");
+                }
+            }
+        }
+        return false;
     }
 
     private void initializePieces() {
@@ -72,26 +106,37 @@ public class Board {
         }
 
         Piece piece = getPieceAt(fromRow, fromCol);
-        if (piece == null) {
+        Piece topiece = getPieceAt(toRow, toCol);
+
+        //空棋子和敌方棋子都不能动
+        if (piece == null || piece.isRed() != Redturn) {
             return false;
         }
 
-        // TODO: 加入回合检查，只允许当前一方移动自己的棋子
-
-        // TODO: 区分己方占用与敌方棋子，并实现吃子
-        if (getPieceAt(toRow, toCol) != null) {
-            return false;
-        }
+        //区分己方占用与敌方棋子，并实现吃子
+        if (topiece != null && topiece.isRed() == Redturn) return false;
 
         if (!piece.canMove(this, fromRow, fromCol, toRow, toCol)) {
             return false;
         }
 
-        // TODO: 检查走完后己方将帅是否安全
+        //检查走完后将帅是否无遮挡面对面
+        pieces[fromRow][fromCol] = null;
+        pieces[toRow][toCol] = piece;
+        boolean flag = JiangtoShuai();
+        pieces[fromRow][fromCol] = piece;
+        pieces[toRow][toCol] = topiece;
+        if (flag) return false;
+
+        // TODO：检查是否将军
+
+
+        //切换棋子状态
         pieces[fromRow][fromCol] = null;
         pieces[toRow][toCol] = piece;
 
-        // TODO: 仅在成功移动后切换回合，并判断将军、胜负等状态
+        //改成黑方回合
+        Redturn = !Redturn;
         return true;
     }
 }

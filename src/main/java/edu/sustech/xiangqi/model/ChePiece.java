@@ -15,26 +15,12 @@ public class ChePiece extends Piece {
         if (Math.abs(fromCol - toCol) > 0 && Math.abs(fromRow - toRow) > 0) return false;
         //判断往哪走,路径上是否有阻挡
         if (fromRow == toRow) {
-            int k = toCol - fromCol;
-            int lth = Math.abs(k);
-            int dc = k / lth;
-            int col = fromCol;
-            for (int i = 1; i <= lth - 1; i++) {
-                col += dc;
-                if (board.getPieceAt(fromRow, col) != null) return false;
-            }
+            int dc = (toCol - fromCol) / Math.abs(toCol - fromCol);
+            return board.hasPieces(fromRow, fromCol, toRow, toCol - dc) == 1;
         } else {
-            int k = toRow - fromRow;
-            int lth = Math.abs(k);
-            int dr = k / lth;
-            int row = fromRow;
-            for (int i = 1; i <= lth - 1; i++) {
-                row += dr;
-                if (board.getPieceAt(row, fromCol) != null) return false;
-            }
+            int dr = (toRow - fromRow) / Math.abs(toRow - fromRow);
+            return board.hasPieces(fromRow, fromCol, toRow - dr, toCol) == 1;
         }
-        //都不违背则返回真
-        return true;
     }
 
 }
