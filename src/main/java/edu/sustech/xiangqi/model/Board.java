@@ -79,6 +79,42 @@ public class Board {
         return false;
     }
 
+    //isFinish：判断当前回合放是否将死对方
+    public boolean isFinish(boolean isRed) {
+        //先扫描所有敌方棋子
+        for (int i = 0; i <= 9; i++) {
+            for (int j = 0; j <= 8; j++) {
+                Piece piece = getPieceAt(i, j);
+                if (piece != null && piece.isRed() != isRed) {
+                    //扫描棋盘确定该棋子能走的地方
+                    for (int toRow = 0; toRow <= 9; toRow++) {
+                        for (int toCol = 0; toCol <= 8; toCol++) {
+                            //获取目标位置的棋子
+                            Piece topiece = getPieceAt(toRow, toCol);
+                            if (toRow == i && toCol == j) continue;
+                            if (topiece != null && topiece.isRed() != isRed) continue;
+                            if (!piece.canMove(this, i, j, toRow, toCol)) continue;
+                            //移动条件满足，模拟并判断移动该步是否能解除将军
+                            boolean flag = false;
+                            boolean JtS = false;
+                            pieces[i][j] = null;
+                            pieces[toRow][toCol] = piece;
+                            //不要忘了检查将帅相对
+                            if (JiangtoShuai(getJiangShuai(true).x, getJiangShuai(true).y)) JtS = true;
+                            //判断对方是否解将
+                            if (!isJiangjun(!isRed)) flag = true;
+                            pieces[i][j] = piece;
+                            pieces[toRow][toCol] = topiece;
+                            if (JtS) continue;
+                            if (flag) return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     //重开
     public void reset() {
         for (int i = 0; i < ROWS; i++)
@@ -136,33 +172,32 @@ public class Board {
         return pieces[row][col];
     }
 
-    public boolean tryMove(int fromRow, int fromCol, int toRow, int toCol) {
-        // TODO：实现下面注释的功能
+    public int tryMove(int fromRow, int fromCol, int toRow, int toCol) {
         // info:该函数返回一个int类型的值代表当前移动操作的响应类型:
-        // info -2:已经将死对方 -1:成功将军对方 0:可以移动且是一次常规移动 1:原地 2:空棋子 3:出界 4:不是你的回合
-        //  5:移动目标位置是你的棋子 6:棋子没有这个走法 7:将帅不能面对面 8:不能送将
+        //      -2:已经将死对方 -1:成功将军对方 0:可以移动且是一次常规移动 1:出界 2:原地 3:空棋子 4:不是你的回合
+        //      5:移动目标位置是你的棋子 6:棋子没有这个走法 7:将帅不能面对面 8:不能送将
 
-        if (!isInside(fromRow, fromCol) || !isInside(toRow, toCol)) {
-            return false;
-        }
-        if (fromRow == toRow && fromCol == toCol) {
-            return false;
-        }
+        //类型1：出界
+        if (!isInside(fromRow, fromCol) || !isInside(toRow, toCol)) return 1;
+
+        //类型2：原地
+        if (fromRow == toRow && fromCol == toCol) return 2;
 
         Piece piece = getPieceAt(fromRow, fromCol);
         Piece topiece = getPieceAt(toRow, toCol);
 
-        //空棋子和敌方棋子都不能动
-        if (piece == null || piece.isRed() != Redturn) {
-            return false;
-        }
+        //类型3：空棋子
+        if (piece == null) return 3;
 
-        //区分己方占用与敌方棋子，并实现吃子
-        if (topiece != null && topiece.isRed() == Redturn) return false;
+        //类型4：不是己方回合
+        if (piece.isRed() != Redturn) return 4;
 
-        if (!piece.canMove(this, fromRow, fromCol, toRow, toCol)) {
-            return false;
-        }
+        //类型5：不能吃自己的子
+        if (topiece != null && topiece.isRed() == Redturn) return 5;
+
+        //类型6：棋子没有这个走法
+        if (!piece.canMove(this, fromRow, fromCol, toRow, toCol)) return 6;
+
 
         //模拟移动并进行一系列操作
         pieces[fromRow][fromCol] = null;
@@ -172,29 +207,30 @@ public class Board {
         if (JiangtoShuai(getJiangShuai(true).x, getJiangShuai(true).y)) {
             pieces[fromRow][fromCol] = piece;
             pieces[toRow][toCol] = topiece;
-            return false;
+            return 7;
         }
 
-        // TODO：检查是否将军
-
-        //1.检查己方移动是否会导致对方有棋子能将军自己
+        //进入将军判断
+        //1.检查己方移动是否会导致对方有棋子能将军自己（不能送将）
         if (isJiangjun(Redturn)) {
             pieces[fromRow][fromCol] = piece;
             pieces[toRow][toCol] = topiece;
-            return false;
+            return 8;
         }
 
         //2.检查己方这一步是否将军对面
         if (isJiangjun(!Redturn)) {
+            //如果将军则判断是否将死
+            if (isFinish(Redturn)) {
+                Redturn = !Redturn;
+                return -2;
+            }
             Redturn = !Redturn;
-            return true;
+            return -1;
         }
-
-        //3.检查是否将死对面
-
 
         //改成黑方回合
         Redturn = !Redturn;
-        return true;
+        return 0;
     }
 }

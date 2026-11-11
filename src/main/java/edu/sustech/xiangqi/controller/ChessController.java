@@ -61,25 +61,34 @@ public class ChessController extends MouseAdapter {
 
         int fr = r0, fc = c0;
         Piece eat = b.getPieceAt(r, c);
-        if (b.tryMove(fr, fc, r, c)) {
+
+        //对应可以走的返回值为-2, -1, 0
+        int movetype = b.tryMove(fr, fc, r, c);
+
+        if (movetype <= 0) {
             clear();
             bp.moveAnim(b.getPieceAt(r, c), eat, fr, fc, r, c);
         }
+        //TODO:完善各种返回值时的对应操作，包括非法类型提示、游戏结束显示
+
     }
 
     private void pick(int r, int c) {
-        r0 = r; c0 = c;
+        r0 = r;
+        c0 = c;
         bp.sel(r, c);
     }
 
     private void clear() {
-        r0 = -1; c0 = -1;
+        r0 = -1;
+        c0 = -1;
         bp.sel(-1, -1);
     }
 
     public void restart() {
         b.reset();
-        r0 = -1; c0 = -1;
+        r0 = -1;
+        c0 = -1;
         bp.resetState();
     }
 }
