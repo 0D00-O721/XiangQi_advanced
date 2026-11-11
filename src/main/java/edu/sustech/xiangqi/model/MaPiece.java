@@ -11,8 +11,8 @@ public class MaPiece extends Piece {
     public boolean canMove(Board board, int fromRow, int fromCol, int toRow, int toCol) {
         int dr = toRow - fromRow;
         int dc = toCol - fromCol;
-        //不能原地走
-        if (dr == 0 && dc == 0) return false;
+        //不能原地走或者直线走
+        if (dr == 0 || dc == 0) return false;
         //必须走日字
         if (Math.abs(dr) + Math.abs(dc) != 3) return false;
         //前方不能有阻挡
