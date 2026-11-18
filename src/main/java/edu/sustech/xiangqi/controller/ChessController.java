@@ -3,6 +3,7 @@ package edu.sustech.xiangqi.controller;
 import edu.sustech.xiangqi.model.Board;
 import edu.sustech.xiangqi.model.Piece;
 import edu.sustech.xiangqi.view.BoardPanel;
+import edu.sustech.xiangqi.search.Searcher;
 
 import javax.swing.SwingUtilities;
 import java.awt.Point;
@@ -13,12 +14,14 @@ import java.awt.event.MouseEvent;
 public class ChessController extends MouseAdapter {
     private final Board b;
     private final BoardPanel bp;
+    private Searcher searcher;
 
     private int r0 = -1, c0 = -1;
 
-    public ChessController(Board b, BoardPanel bp) {
+    public ChessController(Board b, BoardPanel bp, Searcher s) {
         this.b = b;
         this.bp = bp;
+        this.searcher = s;
     }
 
     @Override
@@ -68,6 +71,7 @@ public class ChessController extends MouseAdapter {
         if (movetype <= 0) {
             clear();
             bp.moveAnim(b.getPieceAt(r, c), eat, fr, fc, r, c);
+            searcher.output();
         }
         //TODO:完善各种返回值时的对应操作，包括非法类型提示、游戏结束显示
 

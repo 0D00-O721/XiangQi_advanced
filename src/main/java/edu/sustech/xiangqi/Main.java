@@ -3,6 +3,7 @@ package edu.sustech.xiangqi;
 import edu.sustech.xiangqi.controller.ChessController;
 import edu.sustech.xiangqi.model.Board;
 import edu.sustech.xiangqi.view.ChessFrame;
+import edu.sustech.xiangqi.search.Searcher;
 
 import javax.swing.SwingUtilities;
 
@@ -13,8 +14,9 @@ public class Main {
             @Override
             public void run() {
                 Board board = new Board();
+                Searcher searcher = new Searcher(board);
                 ChessFrame frame = new ChessFrame(board);
-                ChessController controller = new ChessController(board, frame.getBoardPanel());
+                ChessController controller = new ChessController(board, frame.getBoardPanel(), searcher);
 
                 frame.getBoardPanel().addMouseListener(controller);
                 frame.getBoardPanel().addMouseMotionListener(controller);
