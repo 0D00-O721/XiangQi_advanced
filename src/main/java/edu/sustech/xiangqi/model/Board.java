@@ -11,10 +11,22 @@ public class Board {
     public boolean Redturn = true;
 
     // 存储棋子位置
-    private final Piece[][] pieces = new Piece[ROWS][COLS];
+    private static final Piece[][] pieces = new Piece[ROWS][COLS];
 
     public Board() {
         initializePieces();
+    }
+
+    public Piece doMove(int fromRow, int fromCol, int toRow, int toCol, Piece piece) {
+        Piece topiece = pieces[toRow][toCol];
+        pieces[fromRow][fromCol] = null;
+        pieces[toRow][toCol] = piece;
+        return topiece;
+    }
+
+    public void undoMove(int fromRow, int fromCol, int toRow, int toCol, Piece topiece) {
+        pieces[fromRow][fromCol] = pieces[toRow][toCol];
+        pieces[toRow][toCol] = topiece;
     }
 
     //统计一个区域内有多少棋子
@@ -51,8 +63,11 @@ public class Board {
     }
 
     //判断将帅是否面对面
-    public boolean JiangtoShuai(int row, int col) {
-        //从红帅位置网上扫描
+    public boolean JiangtoShuai() {
+        Point ShuaiPos = getJiangShuai(true);
+        int row = ShuaiPos.x;
+        int col = ShuaiPos.y;
+        //从红帅位置往上扫描
         for (int i = row - 1; i >= 0; i--) {
             Piece piece = getPieceAt(i, col);
             //如果有阻挡，直接否
@@ -66,8 +81,9 @@ public class Board {
 
     //判断一方是否[被]将军
     public boolean isJiangjun(boolean isRed) {
-        int Jrow = getJiangShuai(isRed).x;
-        int Jcol = getJiangShuai(isRed).y;
+        Point JiangShuaiPos = getJiangShuai(isRed);
+        int Jrow = JiangShuaiPos.x;
+        int Jcol = JiangShuaiPos.y;
         for (int i = 0; i <= 9; i++) {
             for (int j = 0; j <= 8; j++) {
                 Piece from = getPieceAt(i, j);
@@ -99,8 +115,8 @@ public class Board {
                             boolean JtS = false;
                             pieces[i][j] = null;
                             pieces[toRow][toCol] = piece;
-                            //不要忘了检查将帅相对
-                            if (JiangtoShuai(getJiangShuai(true).x, getJiangShuai(true).y)) JtS = true;
+                            //检查将帅相对
+                            if (JiangtoShuai()) JtS = true;
                             //判断对方是否解将
                             if (!isJiangjun(!isRed)) flag = true;
                             pieces[i][j] = piece;
@@ -204,7 +220,7 @@ public class Board {
         pieces[toRow][toCol] = piece;
 
         //检查走完后将帅是否无遮挡面对面
-        if (JiangtoShuai(getJiangShuai(true).x, getJiangShuai(true).y)) {
+        if (JiangtoShuai()) {
             pieces[fromRow][fromCol] = piece;
             pieces[toRow][toCol] = topiece;
             return 7;

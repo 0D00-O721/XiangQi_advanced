@@ -14,7 +14,7 @@ import java.awt.event.MouseEvent;
 public class ChessController extends MouseAdapter {
     private final Board b;
     private final BoardPanel bp;
-    private Searcher searcher;
+    private final Searcher searcher;
 
     private int r0 = -1, c0 = -1;
 
