@@ -21,6 +21,7 @@ public class ChessController extends MouseAdapter {
     private boolean ai;
     private boolean agentMode;
     private boolean thinking;
+    private int ateCnt = 0;
     private final CodexAppServer codex = new CodexAppServer(McpServer::setAgentStatus);
     //rule60变量：记录多少步没吃子，根据中国象棋规则，120步（60回合）不吃子会直接判和
     private int rule60 = 0;
@@ -58,6 +59,7 @@ public class ChessController extends MouseAdapter {
 
     @Override
     public void mouseClicked(MouseEvent e) {
+        if (thinking) return;
         if (!SwingUtilities.isLeftMouseButton(e)) return;
         Point p = bp.at(e.getX(), e.getY());
         if (p != null) click(p.y, p.x);
@@ -65,6 +67,7 @@ public class ChessController extends MouseAdapter {
 
     @Override
     public void mouseMoved(MouseEvent e) {
+        if (thinking) return;
         Point p = bp.at(e.getX(), e.getY());
         if (p == null) bp.hv(-1, -1);
         else bp.hv(p.y, p.x);
@@ -72,6 +75,7 @@ public class ChessController extends MouseAdapter {
 
     @Override
     public void mouseExited(MouseEvent e) {
+        if (thinking) return;
         bp.hv(-1, -1);
     }
 
@@ -114,8 +118,10 @@ public class ChessController extends MouseAdapter {
             else if (movetype == -3) bp.end(b.Redturn ? 2 : 1, "困毙");
 
             //更新rule60;
-            if (eat != null) rule60 = 0;
-            else rule60++;
+            if (eat != null) {
+                rule60 = 0;
+                ateCnt++;
+            } else rule60++;
 
             searcher.output(rule60);
 
@@ -164,6 +170,21 @@ public class ChessController extends MouseAdapter {
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() {
+                try {
+                    Thread.sleep(190);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                bp.setThinking(true);
+                try {
+                    Thread.sleep(20);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (ateCnt >= 16) {
+                    Searcher.setMaxDep(Searcher.getMaxDep() + 1);
+                    ateCnt = 0;
+                }
                 searcher.AB_dfs(false, rule60);
                 return null;
             }
@@ -171,13 +192,16 @@ public class ChessController extends MouseAdapter {
             @Override
             protected void done() {
                 thinking = false;
+                bp.setThinking(false);
                 int fr = searcher.getFromRow(), fc = searcher.getFromCol();
                 int tr = searcher.getToRow(), tc = searcher.getToCol();
                 Piece p = b.getPieceAt(fr, fc);
                 Piece AIeat = b.getPieceAt(tr, tc);
                 //更新rule60
-                if (AIeat != null) rule60 = 0;
-                else rule60++;
+                if (AIeat != null) {
+                    rule60 = 0;
+                    ateCnt++;
+                } else rule60++;
 
                 if (p == null || p.isRed()) {
                     bp.end(1, "电脑无棋可走");

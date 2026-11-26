@@ -25,10 +25,10 @@ public class Board {
         return b;
     }
 
-    public Piece doMove(int fromRow, int fromCol, int toRow, int toCol, Piece piece) {
+    public Piece doMove(int fromRow, int fromCol, int toRow, int toCol) {
         Piece topiece = pieces[toRow][toCol];
+        pieces[toRow][toCol] = pieces[fromRow][fromCol];
         pieces[fromRow][fromCol] = null;
-        pieces[toRow][toCol] = piece;
         return topiece;
     }
 

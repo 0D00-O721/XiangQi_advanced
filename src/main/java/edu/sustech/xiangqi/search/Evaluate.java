@@ -570,4 +570,118 @@ public class Evaluate {
         int final_score = mix_score * (118 - rule60) / 118;
         return final_score;
     }
+
+    //info 简易评估函数，用于启发式搜索
+    public int simpleEvaluate(Board board, int rule60) {
+        int baseRedEG = 0;
+        int baseRedMG = 0;
+        int baseBlackEG = 0;
+        int baseBlackMG = 0;
+        int redMG = 0;
+        int redEG = 0;
+        int blackMG = 0;
+        int blackEG = 0;
+        for (int i = 0; i <= 9; i++) {
+            for (int j = 0; j <= 8; j++) {
+                Piece piece = board.getPieceAt(i, j);
+                if (piece == null) continue;
+                switch (piece.getName()) {
+                    case "车" -> {
+                        if (piece.isRed()) {
+                            baseRedMG += 1373;
+                            baseRedEG += 2122;
+                            redMG += che_pos[9 - i][j][0];
+                            redEG += che_pos[9 - i][j][1];
+                        } else {
+                            baseBlackMG += 1373;
+                            baseBlackEG += 2122;
+                            blackMG += che_pos[i][j][0];
+                            blackEG += che_pos[i][j][1];
+                        }
+                    }
+                    case "马" -> {
+                        if (piece.isRed()) {
+                            baseRedMG += 561;
+                            baseRedEG += 774;
+                            redMG += ma_pos[9 - i][j][0];
+                            redEG += ma_pos[9 - i][j][1];
+                        } else {
+                            baseBlackMG += 561;
+                            baseBlackEG += 774;
+                            blackMG += ma_pos[i][j][0];
+                            blackEG += ma_pos[i][j][1];
+                        }
+                    }
+                    case "炮" -> {
+                        if (piece.isRed()) {
+                            baseRedMG += 768;
+                            baseRedEG += 753;
+                            redMG += pao_pos[9 - i][j][0];
+                            redEG += pao_pos[9 - i][j][1];
+                        } else {
+                            baseBlackMG += 768;
+                            baseBlackEG += 753;
+                            blackMG += pao_pos[i][j][0];
+                            blackEG += pao_pos[i][j][1];
+                        }
+                    }
+                    case "兵" -> {
+                        baseRedMG += 127;
+                        baseRedEG += 182;
+                        redMG += bing_pos[9 - i][j][0];
+                        redEG += bing_pos[9 - i][j][1];
+                    }
+                    case "卒" -> {
+                        baseBlackMG += 127;
+                        baseBlackEG += 182;
+                        blackMG += bing_pos[i][j][0];
+                        blackEG += bing_pos[i][j][1];
+                    }
+                    case "仕" -> {
+                        baseRedMG += 104;
+                        baseRedEG += 121;
+                        redMG += shi_pos[9 - i][j][0];
+                        redEG += shi_pos[9 - i][j][1];
+                    }
+                    case "士" -> {
+                        baseBlackMG += 104;
+                        baseBlackEG += 121;
+                        blackMG += shi_pos[i][j][0];
+                        blackEG += shi_pos[i][j][1];
+                    }
+                    case "相" -> {
+                        baseRedMG += 167;
+                        baseRedEG += 72;
+                        redMG += xiang_pos[9 - i][j][0];
+                        redEG += xiang_pos[9 - i][j][1];
+                    }
+                    case "象" -> {
+                        baseBlackMG += 167;
+                        baseBlackEG += 72;
+                        blackMG += xiang_pos[i][j][0];
+                        blackEG += xiang_pos[i][j][1];
+                    }
+                    case "帅" -> {
+                        redMG += shuai_pos[9 - i][j][0];
+                        redEG += shuai_pos[9 - i][j][1];
+                    }
+                    case "将" -> {
+                        blackMG += shuai_pos[i][j][0];
+                        blackEG += shuai_pos[i][j][1];
+                    }
+                }
+            }
+        }
+        //使用中局基础子力计算阶段
+        int phase = (baseRedMG + baseBlackMG - 3915) * 128 / 11343;
+        //计算最后的得分差值
+        int diffMG = 0;
+        int diffEG = 0;
+        diffMG = (baseRedMG - baseBlackMG) + (redMG - blackMG);
+        diffEG = (baseRedEG - baseBlackEG) + (redEG - blackEG);
+        //阶段混合、和棋衰减、统计答案
+        int mix_score = (diffMG * phase + diffEG * (128 - phase)) / 128;
+        int final_score = mix_score * (118 - rule60) / 118;
+        return final_score;
+    }
 }
