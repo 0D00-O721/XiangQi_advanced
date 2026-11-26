@@ -46,7 +46,7 @@ public class Main {
         JButton ai = button("人机对弈");
         JButton agent = button("Agent 对弈");
         JButton settings = button("设置");
-        JComboBox<String> depth = new JComboBox<>(new String[]{"入门 · 深度 1", "标准 · 深度 2", "进阶 · 深度 3", "挑战 · 深度 4"});
+        JComboBox<String> depth = new JComboBox<>(new String[]{"入门 · 深度 1", "标准 · 深度 2", "进阶 · 深度 3", "挑战 · 深度 4", "高手 · 深度 5", "大师 · 深度 6"});
         depth.setFont(new Font("KaiTi", Font.PLAIN, 15));
         depth.setForeground(CREAM);
         depth.setBackground(new Color(74, 55, 38));
@@ -64,6 +64,7 @@ public class Main {
             }
         });
         depth.setMaximumSize(new Dimension(260, 38));
+        depth.setToolTipText("搜索深度越高，电脑思考时间越长");
         depth.setAlignmentX(Component.CENTER_ALIGNMENT);
         box.add(pvp);
         box.add(Box.createVerticalStrut(14));

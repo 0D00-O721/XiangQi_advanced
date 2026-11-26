@@ -11,10 +11,18 @@ public class Board {
     public boolean Redturn = true;
 
     // 存储棋子位置
-    private static final Piece[][] pieces = new Piece[ROWS][COLS];
+    private final Piece[][] pieces = new Piece[ROWS][COLS];
 
     public Board() {
         initializePieces();
+    }
+
+    public Board copy() {
+        Board b = new Board();
+        for (int i = 0; i < ROWS; i++)
+            for (int j = 0; j < COLS; j++) b.pieces[i][j] = pieces[i][j];
+        b.Redturn = Redturn;
+        return b;
     }
 
     public Piece doMove(int fromRow, int fromCol, int toRow, int toCol, Piece piece) {

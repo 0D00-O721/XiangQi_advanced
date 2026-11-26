@@ -6,8 +6,9 @@ import edu.sustech.xiangqi.model.Board;
 import edu.sustech.xiangqi.model.Piece;
 
 public class Searcher {
-    private static Board board;
-    private static Evaluate evaluator;
+    private final Board source;
+    private Board board;
+    private final Evaluate evaluator;
     private int fromRow = 0;
     private int fromCol = 0;
     private int toRow = 0;
@@ -67,6 +68,7 @@ public class Searcher {
     }
 
     public Searcher(Board board, Evaluate evaluate) {
+        this.source = board;
         this.board = board;
         this.evaluator = evaluate;
     }
@@ -286,12 +288,13 @@ public class Searcher {
     }
 
     public void AB_dfs() {
+        board = source.copy();
         updateMove(0, 0, 0, 0);
         //黑方搜索
         dfs(-1000000, 1000000, 0, false);
     }
 
     public void output() {
-        System.out.printf("移动成功！当前局面评分(正红负黑): %d\n", evaluator.evaluate(board, 0));
+        System.out.printf("移动成功！当前局面评分(正红负黑): %d\n", evaluator.evaluate(source, 0));
     }
 }
