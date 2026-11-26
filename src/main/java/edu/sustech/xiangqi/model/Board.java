@@ -65,6 +65,7 @@ public class Board {
     //判断将帅是否面对面
     public boolean JiangtoShuai() {
         Point ShuaiPos = getJiangShuai(true);
+        if (ShuaiPos == null) return false;//帅没了
         int row = ShuaiPos.x;
         int col = ShuaiPos.y;
         //从红帅位置往上扫描
@@ -82,6 +83,7 @@ public class Board {
     //判断一方是否[被]将军
     public boolean isJiangjun(boolean isRed) {
         Point JiangShuaiPos = getJiangShuai(isRed);
+        if (JiangShuaiPos == null) return false;//将没了
         int Jrow = JiangShuaiPos.x;
         int Jcol = JiangShuaiPos.y;
         for (int i = 0; i <= 9; i++) {
@@ -188,9 +190,36 @@ public class Board {
         return pieces[row][col];
     }
 
+    //预判这一步能不能走：模拟一下再退回来，不改回合、不改任何状态
+    public boolean ok(int fromRow, int fromCol, int toRow, int toCol) {
+        if (!isInside(fromRow, fromCol) || !isInside(toRow, toCol)) return false;
+        if (fromRow == toRow && fromCol == toCol) return false;
+        Piece piece = getPieceAt(fromRow, fromCol);
+        Piece topiece = getPieceAt(toRow, toCol);
+        if (piece == null) return false;
+        if (piece.isRed() != Redturn) return false;
+        if (topiece != null && topiece.isRed() == Redturn) return false;
+        if (!piece.canMove(this, fromRow, fromCol, toRow, toCol)) return false;
+        //飞将和送将都算不合法
+        pieces[fromRow][fromCol] = null;
+        pieces[toRow][toCol] = piece;
+        boolean r = !JiangtoShuai() && !isJiangjun(piece.isRed());
+        pieces[fromRow][fromCol] = piece;
+        pieces[toRow][toCol] = topiece;
+        return r;
+    }
+
+    //这个子现在还有没有能走的一步，被将军时用来挡住不能解将的子
+    public boolean canSel(int row, int col) {
+        for (int i = 0; i < ROWS; i++)
+            for (int j = 0; j < COLS; j++)
+                if (ok(row, col, i, j)) return true;
+        return false;
+    }
+
     public int tryMove(int fromRow, int fromCol, int toRow, int toCol) {
         // info:该函数返回一个int类型的值代表当前移动操作的响应类型:
-        //      -2:已经将死对方 -1:成功将军对方 0:可以移动且是一次常规移动 1:出界 2:原地 3:空棋子 4:不是你的回合
+        //      -3:对方被困毙 -2:已经将死对方 -1:成功将军对方 0:可以移动且是一次常规移动 1:出界 2:原地 3:空棋子 4:不是你的回合
         //      5:移动目标位置是你的棋子 6:棋子没有这个走法 7:将帅不能面对面 8:不能送将
 
         //类型1：出界
@@ -235,18 +264,11 @@ public class Board {
         }
 
         //2.检查己方这一步是否将军对面
-        if (isJiangjun(!Redturn)) {
-            //如果将军则判断是否将死
-            if (isFinish(Redturn)) {
-                Redturn = !Redturn;
-                return -2;
-            }
-            Redturn = !Redturn;
-            return -1;
-        }
-
-        //改成黑方回合
+        boolean chk = isJiangjun(!Redturn);//这一步有没有将军
+        boolean dead = isFinish(Redturn);//对面是不是一步都走不了
         Redturn = !Redturn;
-        return 0;
+        //走不了就算输：被将军是绝杀，没被将军是困毙
+        if (dead) return chk ? -2 : -3;
+        return chk ? -1 : 0;
     }
 }

@@ -14,6 +14,8 @@ public final class ChessFrame extends JFrame {
     static final Color CREAM = new Color(240, 228, 205);
     static final Color RC = new Color(150, 46, 44);
     static final Color KC = new Color(64, 60, 56);
+    static final Color JC = new Color(168, 74, 38);//将军
+    static final Color GC = new Color(96, 78, 44);//结束
 
     private final BoardPanel bp;
     private final RoundLabel lab;
@@ -37,8 +39,8 @@ public final class ChessFrame extends JFrame {
         setResizable(false);
         setLocationRelativeTo(null);
 
-        bp.addPropertyChangeListener("redTurn", e -> turn(b.Redturn));
-        turn(b.Redturn);
+        bp.addPropertyChangeListener("redTurn", e -> turn());
+        turn();
     }
 
     private JPanel top() {
@@ -58,6 +60,7 @@ public final class ChessFrame extends JFrame {
         lab.setFont(BoardPanel.kai(Font.PLAIN, 13));
         lab.setForeground(CREAM);
         lab.setBorder(BorderFactory.createEmptyBorder(7, 14, 7, 14));
+        lab.setPreferredSize(new Dimension(126, 29));//文字长短不跳动
         lab.setAlignmentY(Component.CENTER_ALIGNMENT);
 
         btn.setFont(BoardPanel.kai(Font.PLAIN, 13));
@@ -87,15 +90,58 @@ public final class ChessFrame extends JFrame {
 
         box.add(lab);
         box.add(Box.createHorizontalStrut(10));
+
+        // 认输 / 和棋
+        String[] ns = {"认输", "和棋"};
+        for (int i = 0; i < ns.length; i++) {
+            final JButton bt = new JButton(ns[i]);
+            final int k = i;
+            bt.setFont(BoardPanel.kai(Font.PLAIN, 13));
+            bt.setForeground(CREAM);
+            bt.setFocusPainted(false);
+            bt.setContentAreaFilled(false);
+            bt.setOpaque(false);
+            bt.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            bt.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(112, 94, 72), 1, true),
+                    BorderFactory.createEmptyBorder(5, 11, 5, 11)));
+            bt.setAlignmentY(Component.CENTER_ALIGNMENT);
+            bt.addActionListener(e -> ask(k));
+            bt.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    bt.setForeground(Color.WHITE);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    bt.setForeground(CREAM);
+                }
+            });
+            box.add(bt);
+            box.add(Box.createHorizontalStrut(8));
+        }
         box.add(btn);
         head.add(box, BorderLayout.EAST);
         return head;
     }
 
-    void turn(boolean red) {
-        lab.setText(red ? "红方走棋" : "黑方走棋");
-        lab.setBackground(red ? RC : KC);
+    void turn() {
+        lab.setText(bp.status());
+        if (bp.res != 0) lab.setBackground(GC);
+        else if (bp.jr >= 0) lab.setBackground(JC);
+        else lab.setBackground(bp.b.Redturn ? RC : KC);
         lab.repaint();
+    }
+
+    // 认输 / 和棋
+    private void ask(int k) {
+        if (bp.res != 0) return;
+        String who = bp.b.Redturn ? "红方" : "黑方";
+        String s = k == 0 ? who + "确认认输？" : "双方同意和棋？";
+        if (JOptionPane.showConfirmDialog(this, s, "确认", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
+        if (k == 0) bp.end(bp.b.Redturn ? 2 : 1, "认输");
+        else bp.end(3, null);
     }
 
     public BoardPanel getBoardPanel() {

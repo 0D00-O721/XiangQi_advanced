@@ -28,16 +28,21 @@ public final class BoardPanel extends JPanel{
     static final Color BLC=new Color(48,44,40);
     static final Color AC=new Color(31,128,122);//选中
     static final Color MK=new Color(196,141,56);//mark
+    static final Color CK=new Color(232,88,40);//将军
 
     static final Font pf=kai(Font.BOLD,28);// piece
     static final Font rf=kai(Font.BOLD,23);// river
+    static final Font bf=kai(Font.BOLD,30);// banner
+    static final Font sf=kai(Font.PLAIN,15);// small
 
     final Board b;
     final Timer tm;
+    final Timer et;//提示文字自动清掉
 
     int sr=-1,sc=-1;
     long t0;
     int hr=-1,hc=-1;
+    boolean hok;//鼠标下面这个子现在能不能走
 
     int f0r=-1,f0c=-1,t1r=-1,t1c=-1;
 
@@ -48,6 +53,11 @@ public final class BoardPanel extends JPanel{
     long ta;
     boolean ani;
 
+    public int jr=-1,jc=-1;//被将军的那个将
+    public boolean chk;//true 红方被将军
+    public int res;//0 没结束 1 红胜 2 黑胜 3 和棋
+    String msg;//状态栏临时文字
+
     int cnt;
 
     public BoardPanel(Board b){
@@ -55,6 +65,8 @@ public final class BoardPanel extends JPanel{
         setBackground(BG);
         setPreferredSize(new Dimension(MG*2+CELL*(Board.COLS-1),MG*2+CELL*(Board.ROWS-1)));
         tm=new Timer(16,e->tick());//from Swing
+        et=new Timer(1800,e->{msg=null;fire();});//提示 1.8s
+        et.setRepeats(false);
     }
 
     static Font kai(int st,int sz){
@@ -75,16 +87,11 @@ public final class BoardPanel extends JPanel{
         sr=row;sc=col;
         t0=System.currentTimeMillis();
         pts.clear();
-        Piece p=b.getPieceAt(row,col);
-        if(p!=null){
-            for(int r=0;r<Board.ROWS;r++){
-                for(int c=0;c<Board.COLS;c++){
-                    if(r==row&&c==col)continue;
-                    Piece t=b.getPieceAt(r,c);
-                    if(t!=null&&t.isRed()==p.isRed())continue;
-                    if(p.canMove(b,row,col,r,c))pts.add(new Point(c,r));
-                }
-            }
+        msg=null;
+        if(b.getPieceAt(row,col)!=null){
+            for(int r=0;r<Board.ROWS;r++)
+                for(int c=0;c<Board.COLS;c++)
+                    if(b.ok(row,col,r,c))pts.add(new Point(c,r));//只点真能走的
         }
         upd();
         repaint();
@@ -93,6 +100,7 @@ public final class BoardPanel extends JPanel{
     public void hv(int row,int col){
         if(row==hr&&col==hc)return;
         hr=row;hc=col;
+        hok=row>=0&&col>=0&&b.canSel(row,col);//走不了就别亮
         repaint();
     }
 
@@ -118,14 +126,53 @@ public final class BoardPanel extends JPanel{
 
     public void resetState(){
         tm.stop();
+        et.stop();
         ani=false;
         mv=null;cap=null;
         sr=-1;sc=-1;
         hr=-1;hc=-1;
+        hok=false;
         f0r=-1;f0c=-1;t1r=-1;t1c=-1;
+        jr=-1;jc=-1;
+        chk=false;
+        res=0;
+        msg=null;
         pts.clear();
         fire();
         repaint();
+    }
+
+    //重算一遍现在谁在被将军
+    public void state(){
+        Point q=b.getJiangShuai(b.Redturn);
+        if(q!=null&&b.isJiangjun(b.Redturn)){jr=q.x;jc=q.y;chk=b.Redturn;}//谁被将军跟着 jr 一起存
+        else{jr=-1;jc=-1;}
+        upd();
+        fire();
+    }
+
+    public String status(){
+        if(res==3)return "和棋";
+        if(res==1)return "红方胜"+(msg==null?"":" · "+msg);
+        if(res==2)return "黑方胜"+(msg==null?"":" · "+msg);
+        if(msg!=null)return msg;
+        if(jr>=0)return chk?"红方被将军":"黑方被将军";//别用 Redturn，它已经换成下一手了
+        return b.Redturn?"红方走棋":"黑方走棋";
+    }
+
+    public void tip(String s){//点错了说一句
+        msg=s;
+        fire();
+        et.restart();
+    }
+
+    public void end(int w,String why){//收摊
+        res=w;
+        msg=why;
+        sr=-1;sc=-1;
+        pts.clear();
+        upd();
+        fire();
     }
 
     private void fire(){
@@ -143,7 +190,7 @@ public final class BoardPanel extends JPanel{
     }
 
     private void upd(){
-        boolean need=ani||sr>=0;
+        boolean need=ani||sr>=0||(jr>=0&&res==0);//将军时光环也要跳，下完就别跳了
         if(need&&!tm.isRunning())tm.start();
         else if(!need&&tm.isRunning())tm.stop();
     }
@@ -163,7 +210,9 @@ public final class BoardPanel extends JPanel{
         last(g);
         hint(g);
         pcs(g);
+        if(jr>=0)warn(g,sx(jc),sy(jr));//被将军的将
         hov(g);
+        if(res!=0)banner(g);
         g.dispose();
     }
 
@@ -313,13 +362,43 @@ public final class BoardPanel extends JPanel{
     }
 
     private void hov(Graphics2D g){
-        if(ani||sr>=0||hr<0)return;
+        if(ani||sr>=0||hr<0||!hok)return;
         Piece p=b.getPieceAt(hr,hc);
         if(p==null||p.isRed()!=b.Redturn)return;
         int x=sx(hc),y=sy(hr),r=R+6;
         g.setColor(new Color(255,250,235,110));
         g.setStroke(new BasicStroke(1.6f));
         g.drawOval(x-r,y-r,r*2,r*2);
+    }
+
+    private void warn(Graphics2D g,int x,int y){//将军红环
+        double s=(System.currentTimeMillis()-t0)/1000.0;
+        float p=(float)(0.5+0.5*Math.sin(s*4));
+        int r=R+12+Math.round(p*3);
+        g.setColor(new Color(CK.getRed(),CK.getGreen(),CK.getBlue(),60));
+        g.setStroke(new BasicStroke(8f));
+        g.drawOval(x-r,y-r,r*2,r*2);
+        g.setColor(new Color(CK.getRed(),CK.getGreen(),CK.getBlue(),215));
+        g.setStroke(new BasicStroke(2.4f));
+        g.drawOval(x-r,y-r,r*2,r*2);
+    }
+
+    private void banner(Graphics2D g){//结果横幅
+        int cx=(sx(0)+sx(Board.COLS-1))/2;
+        int cy=(sy(0)+sy(Board.ROWS-1))/2;
+        g.setColor(new Color(26,20,16,210));
+        g.fillRoundRect(cx-100,cy-38,200,76,18,18);
+        g.setColor(new Color(240,228,205,170));
+        g.setStroke(new BasicStroke(1.2f));
+        g.drawRoundRect(cx-100,cy-38,200,76,18,18);
+        g.setFont(bf);
+        g.setColor(new Color(240,228,205));
+        txt(g,res==3?"和棋":res==1?"红方胜":"黑方胜",cx,cy-8);
+        if(msg!=null){
+            g.setFont(sf);
+            g.setColor(new Color(246,236,214,225));
+            txt(g,msg,cx,cy+22);
+        }
     }
 
     private void glow(Graphics2D g,int x,int y){
