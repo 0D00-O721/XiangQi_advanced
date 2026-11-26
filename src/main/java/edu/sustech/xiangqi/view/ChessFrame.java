@@ -6,6 +6,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 // 窗口
 public final class ChessFrame extends JFrame {
@@ -21,6 +23,7 @@ public final class ChessFrame extends JFrame {
     private final RoundLabel lab;
     private final JButton btn;
     private Runnable act;
+    private Runnable closeAct;
 
     public ChessFrame(Board b) {
         super("中国象棋");
@@ -33,7 +36,14 @@ public final class ChessFrame extends JFrame {
         root.add(top(), BorderLayout.NORTH);
         root.add(bp, BorderLayout.CENTER);
 
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                dispose();
+                if (closeAct != null) closeAct.run();
+            }
+        });
         setContentPane(root);
         pack();
         setResizable(false);
@@ -139,9 +149,52 @@ public final class ChessFrame extends JFrame {
         if (bp.res != 0) return;
         String who = bp.b.Redturn ? "红方" : "黑方";
         String s = k == 0 ? who + "确认认输？" : "双方同意和棋？";
-        if (JOptionPane.showConfirmDialog(this, s, "确认", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
+        if (!confirm(s)) return;
         if (k == 0) bp.end(bp.b.Redturn ? 2 : 1, "认输");
         else bp.end(3, null);
+    }
+
+    private boolean confirm(String s) {
+        JDialog d = new JDialog(this, "确认", true);
+        JPanel root = new JPanel(new BorderLayout(0, 18));
+        root.setBackground(new Color(38, 30, 24));
+        root.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(112, 94, 72)),
+                BorderFactory.createEmptyBorder(22, 26, 20, 26)));
+        JLabel msg = new JLabel(s, SwingConstants.CENTER);
+        msg.setFont(BoardPanel.kai(Font.PLAIN, 17));
+        msg.setForeground(CREAM);
+        root.add(msg, BorderLayout.CENTER);
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        buttons.setOpaque(false);
+        int[] ans = {1};
+        JButton yes = dialogButton("确定");
+        JButton no = dialogButton("取消");
+        yes.addActionListener(e -> { ans[0] = 0; d.dispose(); });
+        no.addActionListener(e -> d.dispose());
+        buttons.add(yes);
+        buttons.add(no);
+        root.add(buttons, BorderLayout.SOUTH);
+        d.setContentPane(root);
+        d.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        d.pack();
+        d.setResizable(false);
+        d.setLocationRelativeTo(this);
+        d.setVisible(true);
+        return ans[0] == 0;
+    }
+
+    private JButton dialogButton(String s) {
+        JButton b = new JButton(s);
+        b.setFont(BoardPanel.kai(Font.PLAIN, 14));
+        b.setForeground(CREAM);
+        b.setBackground(new Color(74, 55, 38));
+        b.setFocusPainted(false);
+        b.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(196, 141, 56)),
+                BorderFactory.createEmptyBorder(7, 20, 7, 20)));
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return b;
     }
 
     public BoardPanel getBoardPanel() {
@@ -150,6 +203,10 @@ public final class ChessFrame extends JFrame {
 
     public void setOnRestart(Runnable r) {
         act = r;
+    }
+
+    public void setOnClose(Runnable r) {
+        closeAct = r;
     }
 
     static final class RoundLabel extends JLabel {

@@ -6,6 +6,7 @@ import edu.sustech.xiangqi.view.BoardPanel;
 import edu.sustech.xiangqi.search.Searcher;
 
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -15,6 +16,8 @@ public class ChessController extends MouseAdapter {
     private final Board b;
     private final BoardPanel bp;
     private final Searcher searcher;
+    private boolean ai;
+    private boolean thinking;
 
     private int r0 = -1, c0 = -1;
 
@@ -22,6 +25,10 @@ public class ChessController extends MouseAdapter {
         this.b = b;
         this.bp = bp;
         this.searcher = s;
+    }
+
+    public void setAI(boolean ai) {
+        this.ai = ai;
     }
 
     @Override
@@ -44,7 +51,7 @@ public class ChessController extends MouseAdapter {
     }
 
     private void click(int r, int c) {
-        if (bp.res != 0) return;//已经下完了，谁也别点
+        if (bp.res != 0 || thinking || (ai && !b.Redturn)) return;//已经下完了，谁也别点
 
         if (r == r0 && c == c0) {
             clear();
@@ -81,6 +88,7 @@ public class ChessController extends MouseAdapter {
             if (movetype == -2) bp.end(b.Redturn ? 2 : 1, "绝杀");
             else if (movetype == -3) bp.end(b.Redturn ? 2 : 1, "困毙");
             searcher.output();
+            if (ai && bp.res == 0 && !b.Redturn) moveAI();
         } else {
             //走不了就说清楚为什么
             if (movetype == 7) bp.tip("不能飞将");
@@ -90,6 +98,40 @@ public class ChessController extends MouseAdapter {
             else if (movetype == 6) bp.tip("这一步走不了");
             else if (movetype == 2) clear();
         }
+    }
+
+    private void moveAI() {
+        thinking = true;
+        bp.tip("电脑思考中…");
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                searcher.AB_dfs();
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                thinking = false;
+                int fr = searcher.getFromRow(), fc = searcher.getFromCol();
+                int tr = searcher.getToRow(), tc = searcher.getToCol();
+                Piece p = b.getPieceAt(fr, fc);
+                if (p == null || p.isRed()) {
+                    bp.end(1, "电脑无棋可走");
+                    return;
+                }
+                int move = b.tryMove(fr, fc, tr, tc);
+                if (move > 0) {
+                    bp.end(1, "电脑无棋可走");
+                    return;
+                }
+                bp.state();
+                bp.moveAnim(b.getPieceAt(tr, tc), null, fr, fc, tr, tc);
+                if (move == -2) bp.end(2, "绝杀");
+                else if (move == -3) bp.end(2, "困毙");
+                searcher.output();
+            }
+        }.execute();
     }
 
     private void pick(int r, int c) {
