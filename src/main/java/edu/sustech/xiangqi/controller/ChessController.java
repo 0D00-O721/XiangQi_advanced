@@ -22,6 +22,8 @@ public class ChessController extends MouseAdapter {
     private boolean agentMode;
     private boolean thinking;
     private final CodexAppServer codex = new CodexAppServer(McpServer::setAgentStatus);
+    //rule60变量：记录多少步没吃子，根据中国象棋规则，120步（60回合）不吃子会直接判和
+    private int rule60 = 0;
 
     private int r0 = -1, c0 = -1;
 
@@ -110,7 +112,13 @@ public class ChessController extends MouseAdapter {
             bp.moveAnim(b.getPieceAt(r, c), eat, fr, fc, r, c);
             if (movetype == -2) bp.end(b.Redturn ? 2 : 1, "绝杀");
             else if (movetype == -3) bp.end(b.Redturn ? 2 : 1, "困毙");
-            searcher.output();
+
+            //更新rule60;
+            if (eat != null) rule60 = 0;
+            else rule60++;
+
+            searcher.output(rule60);
+
             if (ai && bp.res == 0 && !b.Redturn) moveAI();
             else if (agentMode && bp.res == 0 && !b.Redturn) moveAgent();
         } else {
@@ -156,7 +164,7 @@ public class ChessController extends MouseAdapter {
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() {
-                searcher.AB_dfs();
+                searcher.AB_dfs(false, rule60);
                 return null;
             }
 
@@ -166,6 +174,11 @@ public class ChessController extends MouseAdapter {
                 int fr = searcher.getFromRow(), fc = searcher.getFromCol();
                 int tr = searcher.getToRow(), tc = searcher.getToCol();
                 Piece p = b.getPieceAt(fr, fc);
+                Piece AIeat = b.getPieceAt(tr, tc);
+                //更新rule60
+                if (AIeat != null) rule60 = 0;
+                else rule60++;
+
                 if (p == null || p.isRed()) {
                     bp.end(1, "电脑无棋可走");
                     return;
@@ -179,7 +192,7 @@ public class ChessController extends MouseAdapter {
                 bp.moveAnim(b.getPieceAt(tr, tc), null, fr, fc, tr, tc);
                 if (move == -2) bp.end(2, "绝杀");
                 else if (move == -3) bp.end(2, "困毙");
-                searcher.output();
+                searcher.output(rule60);
             }
         }.execute();
     }

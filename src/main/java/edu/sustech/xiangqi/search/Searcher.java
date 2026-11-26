@@ -2,13 +2,13 @@ package edu.sustech.xiangqi.search;
 
 //info:搜索函数
 
+import edu.sustech.xiangqi.controller.ChessController;
 import edu.sustech.xiangqi.model.Board;
 import edu.sustech.xiangqi.model.Piece;
 
 public class Searcher {
-    private final Board source;
-    private Board board;
-    private final Evaluate evaluator;
+    private static Board board;
+    private static Evaluate evaluator;
     private int fromRow = 0;
     private int fromCol = 0;
     private int toRow = 0;
@@ -68,7 +68,6 @@ public class Searcher {
     }
 
     public Searcher(Board board, Evaluate evaluate) {
-        this.source = board;
         this.board = board;
         this.evaluator = evaluate;
     }
@@ -107,14 +106,16 @@ public class Searcher {
     //info: 搜索函数v1主体,暂时采用自制的α-β剪枝
     // alpha:上一个节点(敌方)已经搜到的最优情况, 用于约束这个节点(己方)
     // beta:己方节点及其历史己方节点搜索到的最优情况, 用于传给下一个节点(敌方)做下一个节点的约束
-    public int dfs(int alpha, int beta, int dep, boolean isRed) {
+    public int dfs(int alpha, int beta, int dep, boolean isRed, int rule60) {
         //如果上一次移动的发动者被将军了，它的那步就不能走
         if (board.isJiangjun(!isRed)) return (!isRed) ? -1000001 : 1000001;
         //如果上一次的移动造成了飞将，也不能走
         if (board.JiangtoShuai()) return (!isRed) ? -1000001 : 1000001;
+        //如果120个回合没吃子，游戏结束，平局
+        if (rule60 >= 118) return 0;
         //如果深度抵达限制，则返回局面评分
         if (dep >= maxDep) {
-            return evaluator.evaluate(board, 0);
+            return evaluator.evaluate(board, rule60);
         }
         //全盘搜索己方棋子
         boolean moveCnt = false;
@@ -190,9 +191,9 @@ public class Searcher {
                                     atepiece = board.doMove(i, j, row + dr, col + dc, piece);
                                     if (atepiece != null && (atepiece.getName().equals("帅") || atepiece.getName().equals("将"))) {
                                         board.undoMove(i, j, row + dr, col + dc, atepiece);
-                                        return isRed ? 500000 : -500000;
+                                        return isRed ? (500000 - dep * 10) : -(500000 - dep * 10);
                                     }
-                                    int ans = dfs(beta, alpha, dep + 1, !isRed);
+                                    int ans = dfs(beta, alpha, dep + 1, !isRed, (atepiece == null) ? rule60 + 1 : 0);
                                     if (Math.abs(ans) != 1000001) moveCnt = true;
                                     board.undoMove(i, j, row + dr, col + dc, atepiece);
                                     if (cut(isRed, ans, alpha)) return isRed ? 1000000 : -1000000;
@@ -221,9 +222,9 @@ public class Searcher {
                                                 atepiece = board.doMove(i, j, row + dr, col + dc, piece);
                                                 if (atepiece != null && (atepiece.getName().equals("帅") || atepiece.getName().equals("将"))) {
                                                     board.undoMove(i, j, row + dr, col + dc, atepiece);
-                                                    return isRed ? 500000 : -500000;
+                                                    return isRed ? (500000 - dep * 10) : -(500000 - dep * 10);
                                                 }
-                                                int ans = dfs(beta, alpha, dep + 1, !isRed);
+                                                int ans = dfs(beta, alpha, dep + 1, !isRed, (atepiece == null) ? rule60 + 1 : 0);
                                                 if (Math.abs(ans) != 1000001) moveCnt = true;
                                                 board.undoMove(i, j, row + dr, col + dc, atepiece);
                                                 if (cut(isRed, ans, alpha)) return isRed ? 1000000 : -1000000;
@@ -239,9 +240,9 @@ public class Searcher {
                                     atepiece = board.doMove(i, j, row + dr, col + dc, piece);
                                     if (atepiece != null && (atepiece.getName().equals("帅") || atepiece.getName().equals("将"))) {
                                         board.undoMove(i, j, row + dr, col + dc, atepiece);
-                                        return isRed ? 500000 : -500000;
+                                        return isRed ? (500000 - dep * 10) : -(500000 - dep * 10);
                                     }
-                                    int ans = dfs(beta, alpha, dep + 1, !isRed);
+                                    int ans = dfs(beta, alpha, dep + 1, !isRed, (atepiece == null) ? rule60 + 1 : 0);
                                     if (Math.abs(ans) != 1000001) moveCnt = true;
                                     board.undoMove(i, j, row + dr, col + dc, atepiece);
                                     if (cut(isRed, ans, alpha)) return isRed ? 1000000 : -1000000;
@@ -267,12 +268,12 @@ public class Searcher {
                     //如果吃掉了敌将就返回一个绝对值小于非法走法的极值
                     if (atepiece != null && (atepiece.getName().equals("帅") || atepiece.getName().equals("将"))) {
                         board.undoMove(i, j, i + dr, j + dc, atepiece);
-                        return isRed ? 500000 : -500000;
+                        return isRed ? (500000 - dep * 10) : -(500000 - dep * 10);
                     }
                     //带着这个新局面进入下一层进行搜索
                     //注意：这里的alpha和beta发生了互换，这是因为这一层己方节点的目前最优解beta作为的是下一层敌方节点搜索的约束alpha2
                     //而上一层敌方节点的约束alpha可以传到下一层的敌方节点让其继承为beta2以达成记忆化的效果
-                    int ans = dfs(beta, alpha, dep + 1, !isRed);
+                    int ans = dfs(beta, alpha, dep + 1, !isRed, (atepiece == null) ? rule60 + 1 : 0);
                     if (Math.abs(ans) != 1000001) moveCnt = true;
                     //搜索完毕，撤销移动
                     board.undoMove(i, j, i + dr, j + dc, atepiece);
@@ -283,18 +284,18 @@ public class Searcher {
             }
         }
         //如果一步都没走（被将死）返回一个极值
-        if (!moveCnt) return isRed ? -500000 : 500000;
+        if (!moveCnt) return isRed ? -(500000 - dep * 10) : (500000 - dep * 10);
         return beta;
     }
 
-    public void AB_dfs() {
-        board = source.copy();
+    public void AB_dfs(boolean isRed, int rule60) {
         updateMove(0, 0, 0, 0);
-        //黑方搜索
-        dfs(-1000000, 1000000, 0, false);
+        //黑方搜索\红方搜索
+        if (!isRed) dfs(-1000000, 1000000, 0, false, rule60);
+        else dfs(1000000, -1000000, 0, true, rule60);
     }
 
-    public void output() {
-        System.out.printf("移动成功！当前局面评分(正红负黑): %d\n", evaluator.evaluate(source, 0));
+    public void output(int rule60) {
+        System.out.printf("移动成功！当前局面评分(正红负黑): %d\n", evaluator.evaluate(board, rule60));
     }
 }
