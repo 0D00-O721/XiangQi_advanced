@@ -4,6 +4,8 @@ import edu.sustech.xiangqi.model.Board;
 import edu.sustech.xiangqi.model.Piece;
 import edu.sustech.xiangqi.view.BoardPanel;
 import edu.sustech.xiangqi.search.Searcher;
+import edu.sustech.xiangqi.agent.CodexAppServer;
+import edu.sustech.xiangqi.agent.McpServer;
 
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -17,7 +19,9 @@ public class ChessController extends MouseAdapter {
     private final BoardPanel bp;
     private final Searcher searcher;
     private boolean ai;
+    private boolean agentMode;
     private boolean thinking;
+    private final CodexAppServer codex = new CodexAppServer(McpServer::setAgentStatus);
 
     private int r0 = -1, c0 = -1;
 
@@ -29,6 +33,25 @@ public class ChessController extends MouseAdapter {
 
     public void setAI(boolean ai) {
         this.ai = ai;
+    }
+
+    public void setAgentMode(boolean on) {
+        agentMode = on;
+    }
+
+    public String agentMove(int fr, int fc, int tr, int tc) {
+        if (!agentMode) return "错误：当前对局未开启 Agent 模式。";
+        if (bp.res != 0) return "错误：对局已经结束。";
+        if (b.Redturn) return "错误：现在是红方回合，Agent 只能在黑方回合走棋。";
+        Piece eat = b.getPieceAt(tr, tc);
+        int move = b.tryMove(fr, fc, tr, tc);
+        if (move > 0) return "错误：走法不合法，Board.tryMove 返回 " + move + "。";
+        bp.state();
+        bp.moveAnim(b.getPieceAt(tr, tc), eat, fr, fc, tr, tc);
+        if (move == -2) bp.end(2, "绝杀");
+        else if (move == -3) bp.end(2, "困毙");
+        else if (move == -1) return "走棋成功，红方被将军。";
+        return "走棋成功。";
     }
 
     @Override
@@ -51,7 +74,7 @@ public class ChessController extends MouseAdapter {
     }
 
     private void click(int r, int c) {
-        if (bp.res != 0 || thinking || (ai && !b.Redturn)) return;//已经下完了，谁也别点
+        if (bp.res != 0 || thinking || ((ai || agentMode) && !b.Redturn)) return;//已经下完了，谁也别点
 
         if (r == r0 && c == c0) {
             clear();
@@ -89,6 +112,7 @@ public class ChessController extends MouseAdapter {
             else if (movetype == -3) bp.end(b.Redturn ? 2 : 1, "困毙");
             searcher.output();
             if (ai && bp.res == 0 && !b.Redturn) moveAI();
+            else if (agentMode && bp.res == 0 && !b.Redturn) moveAgent();
         } else {
             //走不了就说清楚为什么
             if (movetype == 7) bp.tip("不能飞将");
@@ -98,6 +122,32 @@ public class ChessController extends MouseAdapter {
             else if (movetype == 6) bp.tip("这一步走不了");
             else if (movetype == 2) clear();
         }
+    }
+
+    public void retryAgent() {
+        if (agentMode && !thinking && bp.res == 0 && !b.Redturn) moveAgent();
+    }
+
+    private void moveAgent() {
+        thinking = true;
+        bp.tip("正在请求 Codex Agent…");
+        new SwingWorker<String, Void>() {
+            @Override
+            protected String doInBackground() {
+                return codex.playTurn(System.getProperty("user.dir"));
+            }
+
+            @Override
+            protected void done() {
+                thinking = false;
+                try {
+                    String answer = get();
+                    if (answer.startsWith("Agent 请求失败：")) bp.tip(answer + "，可重试");
+                } catch (Exception e) {
+                    bp.tip("Codex Agent 请求失败，可重试");
+                }
+            }
+        }.execute();
     }
 
     private void moveAI() {
@@ -150,6 +200,12 @@ public class ChessController extends MouseAdapter {
         b.reset();
         r0 = -1;
         c0 = -1;
+        thinking = false;
+        codex.newGame();
         bp.resetState();
+    }
+
+    public void close() {
+        codex.close();
     }
 }

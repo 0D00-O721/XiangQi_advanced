@@ -1,6 +1,7 @@
 package edu.sustech.xiangqi.view;
 
 import edu.sustech.xiangqi.model.Board;
+import edu.sustech.xiangqi.agent.McpServer;
 
 import javax.swing.*;
 import java.awt.*;
@@ -22,14 +23,24 @@ public final class ChessFrame extends JFrame {
     private final BoardPanel bp;
     private final RoundLabel lab;
     private final JButton btn;
+    private final JButton agentBtn;
+    private final JLabel agentStatus;
+    private final Timer agentStatusTimer;
     private Runnable act;
+    private Runnable agentAct;
     private Runnable closeAct;
 
     public ChessFrame(Board b) {
-        super("中国象棋");
+        super("Agent 对局");
         bp = new BoardPanel(b);
         lab = new RoundLabel("红方走棋");
         btn = new JButton("重新开始");
+        agentBtn = new JButton("请求 Agent");
+        agentStatus = new JLabel();
+        agentStatus.setFont(BoardPanel.kai(Font.PLAIN, 12));
+        agentStatus.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+        agentStatus.setVisible(false);
+        agentStatusTimer = new Timer(1000, e -> refreshAgentStatus());
 
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(new Color(38, 30, 24));
@@ -40,6 +51,7 @@ public final class ChessFrame extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
+                agentStatusTimer.stop();
                 dispose();
                 if (closeAct != null) closeAct.run();
             }
@@ -57,11 +69,6 @@ public final class ChessFrame extends JFrame {
         JPanel head = new JPanel(new BorderLayout());
         head.setOpaque(false);
         head.setBorder(BorderFactory.createEmptyBorder(16, 28, 12, 28));
-
-        JLabel t = new JLabel("中国象棋");
-        t.setFont(BoardPanel.kai(Font.BOLD, 24));
-        t.setForeground(CREAM);
-        head.add(t, BorderLayout.WEST);
 
         JPanel box = new JPanel();
         box.setOpaque(false);
@@ -100,6 +107,24 @@ public final class ChessFrame extends JFrame {
 
         box.add(lab);
         box.add(Box.createHorizontalStrut(10));
+
+        box.add(agentStatus);
+        box.add(Box.createHorizontalStrut(8));
+
+        agentBtn.setFont(BoardPanel.kai(Font.PLAIN, 13));
+        agentBtn.setForeground(CREAM);
+        agentBtn.setFocusPainted(false);
+        agentBtn.setContentAreaFilled(false);
+        agentBtn.setOpaque(false);
+        agentBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        agentBtn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(112, 94, 72), 1, true),
+                BorderFactory.createEmptyBorder(5, 11, 5, 11)));
+        agentBtn.setAlignmentY(Component.CENTER_ALIGNMENT);
+        agentBtn.setVisible(false);
+        agentBtn.addActionListener(e -> { if (agentAct != null) agentAct.run(); });
+        box.add(agentBtn);
+        box.add(Box.createHorizontalStrut(8));
 
         // 认输 / 和棋
         String[] ns = {"认输", "和棋"};
@@ -207,6 +232,51 @@ public final class ChessFrame extends JFrame {
 
     public void setOnClose(Runnable r) {
         closeAct = r;
+    }
+
+    public void setAgentMode(boolean on) {
+        agentBtn.setVisible(on);
+        agentStatus.setVisible(on);
+        pack();
+        setLocationRelativeTo(null);
+        if (on) {
+            refreshAgentStatus();
+            agentStatusTimer.start();
+        } else {
+            agentStatusTimer.stop();
+        }
+    }
+
+    private void refreshAgentStatus() {
+        String status = McpServer.getAgentStatus();
+        if (status.contains("会话已保存")) {
+            agentStatus.setText("● 对局会话已保存");
+            agentStatus.setForeground(new Color(224, 174, 86));
+        } else if (status.contains("未连接") || status.contains("App Server 已断开")) {
+            agentStatus.setText("● Codex 未连接");
+            agentStatus.setForeground(new Color(205, 112, 96));
+        } else if (status.contains("思考")) {
+            agentStatus.setText("● Agent 思考中");
+            agentStatus.setForeground(new Color(224, 174, 86));
+        } else if (status.contains("App Server 已连接")) {
+            // A turn-level error does not mean the App Server connection was lost.
+            agentStatus.setText("● Codex 已连接");
+            agentStatus.setForeground(new Color(126, 190, 132));
+        } else if (status.contains("异常") || status.contains("错误")) {
+            agentStatus.setText("● Agent 回合异常");
+            agentStatus.setForeground(new Color(205, 150, 96));
+        } else if (status.contains("正在") || status.contains("待启动") || status.contains("尚未启动")) {
+            agentStatus.setText(status.contains("连接") ? "● 正在连接 Codex" : "● Agent 待启动");
+            agentStatus.setForeground(new Color(224, 174, 86));
+        } else {
+            agentStatus.setText("● Codex Agent 就绪");
+            agentStatus.setForeground(new Color(126, 190, 132));
+        }
+        agentStatus.setToolTipText(status);
+    }
+
+    public void setOnAgentRequest(Runnable r) {
+        agentAct = r;
     }
 
     static final class RoundLabel extends JLabel {
