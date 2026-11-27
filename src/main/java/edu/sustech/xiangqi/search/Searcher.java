@@ -14,9 +14,22 @@ public class Searcher {
     private int toRow = 0;
     private int toCol = 0;
     private static int maxDep = 0;
+    private static long maxTime = 0;
+    //记录搜索节点数量
+    private static int nodes = 1;
+    //设置初始极大值以防限深搜索被卡掉
+    private static long currentTime = 9223372036854775806L;
+
+    //bestMove:记录每一层的最优解
+    private static final int[] bestMove = new int[20];
+
+    //用于限制时间的类
+    private static class TimeoutException extends RuntimeException {
+    }
+
     //moveStep:记录每一层的走法用于排序
     //步格式: 四位数 abcd 每一位分别代表 fromRow,fromCol,toRow,toCol;
-    private static final int[][] moveStep = new int[10][128];
+    private static final int[][] moveStep = new int[20][128];
 
     //第i种棋子的第j个移动方向 (1.车\2.士\3.炮\4.兵\5.马\6.象\7.将)
     private static final int[][][] step = {
@@ -29,6 +42,14 @@ public class Searcher {
             {{}, {2, 2}, {-2, -2}, {2, -2}, {-2, 2}},
             {{}, {0, 1}, {0, -1}, {1, 0}, {-1, 0}}
     };
+
+    public static long getMaxTime() {
+        return maxTime;
+    }
+
+    public static void setMaxTime(long maxTime) {
+        Searcher.maxTime = maxTime;
+    }
 
     public static int getMaxDep() {
         return maxDep;
@@ -76,6 +97,16 @@ public class Searcher {
     }
 
     //一系列用于压缩和解码步数排序数组内部数据的函数
+    private static int compactMove(int fromRow, int fromCol, int toRow, int toCol, int Score) {
+        boolean isNega = false;
+        if (Score < 0) {
+            isNega = true;
+            Score = -Score;
+        }
+        int ans = Score * 10000 + fromRow * 1000 + fromCol * 100 + toRow * 10 + toCol;
+        return isNega ? (-ans) : ans;
+    }
+
     private static int useScore(int x) {
         return x / 10000;
     }
@@ -100,22 +131,12 @@ public class Searcher {
     }
 
     private static void recordMove(boolean isRed, int cnt, int dep, int fromRow, int fromCol, int toRow, int toCol, int Score) {
-        int ans = 0;
-        boolean isNega = false;
-        if (Score < 0) {
-            isNega = true;
-            Score = -Score;
-        }
-        ans = Score * 10000 + fromRow * 1000 + fromCol * 100 + toRow * 10 + toCol;
-        ans = isNega ? -ans : ans;
+        int ans = compactMove(fromRow, fromCol, toRow, toCol, Score);
         moveStep[dep][cnt] = isRed ? -ans : ans;
     }
 
-    private void updateMove(int fromRow, int fromCol, int toRow, int toCol) {
-        this.toRow = toRow;
-        this.toCol = toCol;
-        this.fromRow = fromRow;
-        this.fromCol = fromCol;
+    private void updateMove(int dep, int fromRow, int fromCol, int toRow, int toCol, int Score) {
+        bestMove[dep] = compactMove(fromRow, fromCol, toRow, toCol, Score);
     }
 
     private static boolean cut(boolean isRed, int ans, int alpha) {
@@ -130,12 +151,12 @@ public class Searcher {
     private int updateBeta(boolean isRed, int beta, int ans, int dep, int i, int j, int dr, int dc) {
         if (!isRed) {
             if (ans < beta) {
-                if (dep == 0) updateMove(i, j, i + dr, j + dc);
+                updateMove(dep, i, j, i + dr, j + dc, ans);
                 return ans;
             }
         } else {
             if (ans > beta) {
-                if (dep == 0) updateMove(i, j, i + dr, j + dc);
+                updateMove(dep, i, j, i + dr, j + dc, ans);
                 return ans;
             }
         }
@@ -146,6 +167,8 @@ public class Searcher {
     // alpha:上一个节点(敌方)已经搜到的最优情况, 用于约束这个节点(己方)
     // beta:己方节点及其历史己方节点搜索到的最优情况, 用于传给下一个节点(敌方)做下一个节点的约束
     public int dfs(int alpha, int beta, int dep, boolean isRed, int rule60, boolean isTry) {
+        //最优先：如果时间超标直接throw掉整个进程
+        if ((++nodes & 1023) == 0 && (System.currentTimeMillis() - currentTime > maxTime)) throw new TimeoutException();
         //如果上一次移动的发动者被将军了，它的那步就不能走
         if (board.isJiangjun(!isRed)) return (!isRed) ? -100001 : 100001;   //返回一个和剪枝值不同的值以防止混淆
         //如果上一次的移动造成了飞将，也不能走
@@ -336,7 +359,10 @@ public class Searcher {
         //启发式搜索!对收集到的所有走法进行排序(record保证了对于当前结点，越靠前的越优)
         java.util.Arrays.sort(moveStep[dep], 1, moveCnt + 1);
         //如果有走法，遍历数组从优到劣取出所有走法
-        for (int i = 1; i <= moveCnt; i++) {
+        //如果有上一轮的信息，则优先使用
+        int l = moveStep[dep][0] == 0 ? 1 : 0;
+        for (int i = l; i <= moveCnt; i++) {
+            if (i > 0 && moveStep[dep][i] == moveStep[dep][0]) continue;
             int fr = useFr(moveStep[dep][i]);
             int fc = useFc(moveStep[dep][i]);
             int tr = useTr(moveStep[dep][i]);
@@ -353,15 +379,64 @@ public class Searcher {
             if (cut(isRed, ans, alpha)) return isRed ? 100000 : -100000;
             beta = updateBeta(isRed, beta, ans, dep, fr, fc, tr - fr, tc - fc);
         }
+        //清空上一轮留下的的走法信息(已经用过了)
+        moveStep[dep][0] = 0;
         //返回这个结点搜到的对应己方的最好结果
         return beta;
     }
 
+    //info 限制深度的A*剪枝深搜入口
     public void AB_dfs(boolean isRed, int rule60) {
-        updateMove(0, 0, 0, 0);
         //黑方搜索\红方搜索
         if (!isRed) dfs(-100000, 100000, 0, false, rule60, false);
         else dfs(100000, -100000, 0, true, rule60, false);
+        //使用结果
+        this.fromRow = useFr(bestMove[0]);
+        this.fromCol = useFc(bestMove[0]);
+        this.toRow = useTr(bestMove[0]);
+        this.toCol = useTc(bestMove[0]);
+    }
+
+    //info 迭代加深搜索入口
+    public void IDA_dfs(boolean isRed, int rule60) {
+        //先记录棋盘
+        Piece[][] copyPieces = new Piece[10][9];
+        for (int i = 0; i <= 9; i++)
+            for (int j = 0; j <= 8; j++)
+                copyPieces[i][j] = board.getPieceAt(i, j);
+        //建立时间戳
+        currentTime = System.currentTimeMillis();
+        //开始迭代加深
+        for (int k = 1; k <= 18; k++) {
+            maxDep = k;
+            try {
+                if (isRed) dfs(100000, -100000, 0, true, rule60, false);
+                else dfs(-100000, 100000, 0, false, rule60, false);
+                //搜完了才更新最优答案，以免被运行一半的搜索给污染
+                this.fromRow = useFr(bestMove[0]);
+                this.fromCol = useFc(bestMove[0]);
+                this.toRow = useTr(bestMove[0]);
+                this.toCol = useTc(bestMove[0]);
+                //同时给下一层引路
+                for (int i = 0; i < k; i++) moveStep[i][0] = bestMove[i];
+            } catch (TimeoutException e) {
+                //如果异常退出，则复原棋盘
+                for (int i = 0; i <= 9; i++)
+                    for (int j = 0; j <= 8; j++)
+                        board.setPieces(i, j, copyPieces[i][j]);
+                //调试
+                System.out.printf("本次限时 %d ms, 最大搜索完 %d 层, 共搜索 %d 个局面\n", maxTime, k - 1, nodes);
+                //然后退出
+                break;
+            }
+        }
+        //清空最优路径残留
+        for (int i = 0; i <= 18; i++) {
+            moveStep[i][0] = 0;
+        }
+        //恢复
+        currentTime = 9223372036854775806L;
+        nodes = 1;
     }
 
     public void output(int rule60) {

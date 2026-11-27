@@ -173,19 +173,17 @@ public class ChessController extends MouseAdapter {
                 try {
                     Thread.sleep(190);
                 } catch (Exception e) {
-                    e.printStackTrace();
                 }
                 bp.setThinking(true);
                 try {
                     Thread.sleep(20);
                 } catch (Exception e) {
-                    e.printStackTrace();
                 }
                 if (ateCnt >= 16) {
                     Searcher.setMaxDep(Searcher.getMaxDep() + 1);
                     ateCnt = 0;
                 }
-                searcher.AB_dfs(false, rule60);
+                searcher.IDA_dfs(false, rule60);
                 return null;
             }
 

@@ -15,6 +15,8 @@ public class Main {
     static final Color BG = new Color(38, 30, 24);
     static final Color CREAM = new Color(240, 228, 205);
     static final Color GOLD = new Color(196, 141, 56);
+    //这里可以调整每个难度对应的搜索时间限制(下标从1开始)，并且至少保证搜索1024个节点
+    static final int[] timeLimit = {0, 0, 10, 100, 400, 1000, 2500, 5000};
 
     public static void main(String[] args) {
         McpServer.setEnabled(true);
@@ -46,7 +48,7 @@ public class Main {
         JButton ai = button("人机对弈");
         JButton agent = button("Agent 对弈");
         JButton settings = button("设置");
-        JComboBox<String> depth = new JComboBox<>(new String[]{"入门 · 深度 1", "标准 · 深度 2", "进阶 · 深度 3", "挑战 · 深度 4", "高手 · 深度 5", "大师 · 深度 6"});
+        JComboBox<String> depth = new JComboBox<>(new String[]{"入门 · 难度 1", "简单 · 难度 2", "标准 · 难度 3", "挑战 · 难度 4", "高手 · 难度 5", "大师 · 难度 6", "巅峰 · 难度 7"});
         depth.setFont(new Font("KaiTi", Font.PLAIN, 15));
         depth.setForeground(CREAM);
         depth.setBackground(new Color(74, 55, 38));
@@ -82,8 +84,14 @@ public class Main {
         note.setAlignmentX(Component.CENTER_ALIGNMENT);
         box.add(note);
         settings.addActionListener(e -> settings(f, note));
-        pvp.addActionListener(e -> { f.dispose(); game(false, 2, false); });
-        ai.addActionListener(e -> { f.dispose(); game(true, depth.getSelectedIndex() + 1, false); });
+        pvp.addActionListener(e -> {
+            f.dispose();
+            game(false, 2, false);
+        });
+        ai.addActionListener(e -> {
+            f.dispose();
+            game(true, depth.getSelectedIndex() + 1, false);
+        });
         agent.addActionListener(e -> {
             if (!McpServer.isEnabled()) {
                 JOptionPane.showMessageDialog(f, "请先开启本机 MCP 接入。", "Agent 对弈", JOptionPane.INFORMATION_MESSAGE);
@@ -163,6 +171,7 @@ public class Main {
         Evaluate evaluate = new Evaluate();
         Searcher searcher = new Searcher(board, evaluate);
         Searcher.setMaxDep(dep);
+        Searcher.setMaxTime(timeLimit[dep]);
         ChessFrame frame = new ChessFrame(board);
         ChessController controller = new ChessController(board, frame.getBoardPanel(), searcher);
         controller.setAI(ai);

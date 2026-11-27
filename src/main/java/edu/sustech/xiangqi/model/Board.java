@@ -17,6 +17,10 @@ public class Board {
         initializePieces();
     }
 
+    public void setPieces(int row, int col, Piece piece) {
+        pieces[row][col] = piece;
+    }
+
     public Board copy() {
         Board b = new Board();
         for (int i = 0; i < ROWS; i++)
