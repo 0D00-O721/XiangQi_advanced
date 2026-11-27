@@ -236,6 +236,7 @@ public class ChessController extends MouseAdapter {
         r0 = -1;
         c0 = -1;
         thinking = false;
+        rule60 = 0;
         codex.newGame();
         bp.resetState();
     }
